@@ -2,6 +2,6 @@ package person
 
 import "github.com/gin-gonic/gin"
 
-func (s *PersonController) Register(engine *gin.Engine) {
-	engine.POST("/api/v1/person", s.Create)
+func (p *Controller) Register(engine *gin.Engine) {
+	engine.POST("/api/v1/create_person", p.Create)
 }

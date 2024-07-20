@@ -2,8 +2,6 @@ package person
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"go.uber.org/zap"
 )
@@ -45,6 +43,7 @@ func (d *PersonDao) CheckExistByName(ctx context.Context, name string) (int64, e
 		return id, nil
 	})
 	if err != nil {
+		d.lg.Error("execute read err", zap.Error(err))
 		return -1, err
 	}
 	return userId.(int64), nil
@@ -52,35 +51,31 @@ func (d *PersonDao) CheckExistByName(ctx context.Context, name string) (int64, e
 
 func (d *PersonDao) CreatePerson(ctx context.Context, person Person) (int64, error) {
 	id, err := d.sessionClient.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		existId, err := d.CheckExistByName(ctx, person.Name)
-		if err != nil {
-			return nil, err
-		}
-		if existId != -1 {
-			return existId, nil
-		}
 		result, err := tx.Run(
 			ctx,
-			"CREATE (p:Person {id: $id, name: $name, birthdate: $birthdate}) RETURN p.id as id",
+			"CREATE (p:Person {name: $name, birthdate: $birthdate}) RETURN id(p) as id",
 			map[string]interface{}{
-				"id":        person.ID,
 				"name":      person.Name,
 				"birthdate": person.Birthdate,
 			})
 		if err != nil {
+			d.lg.Error("create person err", zap.Error(err))
 			return nil, err
 		}
 
 		per, err := result.Single(ctx)
 		if err != nil {
+			d.lg.Error("get result err", zap.Error(err))
 			return "", err
 		}
+
 		id, _ := per.AsMap()["id"]
 
 		return id, nil
 
 	})
 	if err != nil {
+		d.lg.Error("execute write err", zap.Error(err))
 		return 0, err
 	}
 
@@ -88,14 +83,7 @@ func (d *PersonDao) CreatePerson(ctx context.Context, person Person) (int64, err
 }
 
 func (d *PersonDao) CreateRelationship(ctx context.Context, fromId, toId int64, relationType string) error {
-	exist, err := d.CheckExistRelationship(ctx, fromId, toId, relationType)
-	if err != nil {
-		return err
-	}
-	if exist {
-		return nil
-	}
-	_, err = d.sessionClient.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+	_, err := d.sessionClient.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		result, err := tx.Run(ctx, `MATCH (a:Person {id: $fromId}), (b:Person {id: $toId})
              CREATE (a)-[r:`+relationType+`]->(b)
              RETURN type(r)`, map[string]any{
@@ -103,16 +91,18 @@ func (d *PersonDao) CreateRelationship(ctx context.Context, fromId, toId int64, 
 			"toId":   toId,
 		})
 		if err != nil {
+			d.lg.Error("create relationship err", zap.Error(err))
 			return nil, err
 		}
 
 		if result.Next(ctx) {
-			fmt.Printf("Created Relationship: %#v\n", result.Record().Values)
+			d.lg.Debug("Created Relationship", zap.Any("values", result.Record().Values))
 		}
 		return nil, nil
 	})
 
 	if err != nil {
+		d.lg.Error("execute write err", zap.Error(err))
 		return err
 	}
 	return nil
@@ -127,6 +117,7 @@ func (d *PersonDao) CheckExistRelationship(ctx context.Context, fromId, toId int
 			"toId":   toId,
 		})
 		if err != nil {
+			d.lg.Error("match relationship err", zap.Int64("fromId", fromId), zap.Int64("toId", toId), zap.String("relationType", relationType), zap.Error(err))
 			return false, err
 		}
 		ok := int64(0)
@@ -134,9 +125,10 @@ func (d *PersonDao) CheckExistRelationship(ctx context.Context, fromId, toId int
 			a := res.Record().AsMap()["count"]
 			ok = a.(int64)
 		}
-		return ok != 0, err
+		return ok != 0, nil
 	})
 	if err != nil {
+		d.lg.Error("execute read err", zap.Error(err))
 		return false, err
 	}
 	return exist.(bool), nil

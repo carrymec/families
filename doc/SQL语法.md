@@ -49,6 +49,8 @@ CREATE
 RETURN <relationship-label-name>
 # eg
 CREATE (fb1:FaceBookProfile1)-[like:LIKES]->(fb2:FaceBookProfile2) 
+# 创建并返回内置id
+create (a:A {name: "test"}) return id(a)
 # 查询
 MATCH p=()-[r:LIKES]->() RETURN p 
 # 有属性语法
