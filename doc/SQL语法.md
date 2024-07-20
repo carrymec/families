@@ -63,6 +63,10 @@ RETURN <relationship-label-name>
 CREATE (video1:YoutubeVideo1{title:"Action Movie1",updated_by:"Abc",uploaded_date:"10/10/2010"})
 -[movie:ACTION_MOVIES{rating:1}]->
 (video2:YoutubeVideo2{title:"Action Movie2",updated_by:"Xyz",uploaded_date:"12/12/2012"}) 
+# 创建并绑定关系
+MATCH (n:Person) WHERE id(n) = 427
+create(p:Person{name: "秦王政1",birthdate: "前259年－前210年"})
+CREATE (p)-[pson:son]->(n)
 ```
 # 查询关系
 ```shell

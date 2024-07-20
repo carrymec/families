@@ -53,7 +53,7 @@ func (s *Service) CreatePerson(ctx context.Context, person Person) (int64, error
 
 func (s *Service) CreateRelationship(ctx context.Context, fromId, toId int64, relationType string) error {
 	// 校验关系是否存在
-	exist, err := s.CheckExistRelationship(ctx, fromId, toId, relationType)
+	exist, err := s.CheckExistRelationship(ctx, fromId, toId, RelationType(relationType))
 	if err != nil {
 		s.lg.Error("校验关系是否存在失败", zap.Error(err))
 		return err
@@ -69,7 +69,7 @@ func (s *Service) CheckExistByName(ctx context.Context, name string) (int64, err
 	return s.dao.CheckExistByName(ctx, name)
 }
 
-func (s *Service) CheckExistRelationship(ctx context.Context, fromId, toId int64, relationType string) (bool, error) {
+func (s *Service) CheckExistRelationship(ctx context.Context, fromId, toId int64, relationType RelationType) (bool, error) {
 	return s.dao.CheckExistRelationship(ctx, fromId, toId, relationType)
 }
 

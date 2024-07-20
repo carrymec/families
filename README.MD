@@ -60,6 +60,8 @@ go run main.go
 # 未来规划
 
 1. ing...
+2. 批量创建关系 并在关系上添加labels，例如 A是B的父亲、同时是C的丈夫，A不存在B C数据都存在，我在创建A的时候我需要将这些关系加上，并加上labels
+   ，例如AC是什么时候结婚的在这个丈夫的关系上加上married_date等
 
 # TODO
 

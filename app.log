@@ -31,3 +31,7 @@
 {"level":"INFO","time":"2024-07-20T22:39:31.691+0800","caller":"families/main.go:52","msg":"connection success..."}
 {"level":"INFO","time":"2024-07-20T22:42:06.203+0800","caller":"families/main.go:52","msg":"connection success..."}
 {"level":"INFO","time":"2024-07-20T22:42:23.785+0800","caller":"logger/logger.go:66","msg":"/api/v1/create_person","status":200,"method":"POST","path":"/api/v1/create_person","query":"","ip":"127.0.0.1","user-agent":"PostmanRuntime/7.37.3","errors":"","cost":11.894511823}
+{"level":"INFO","time":"2024-07-20T23:25:52.506+0800","caller":"families/main.go:52","msg":"connection success..."}
+{"level":"INFO","time":"2024-07-20T23:25:58.307+0800","caller":"logger/logger.go:66","msg":"/api/v1/create_person","status":200,"method":"POST","path":"/api/v1/create_person","query":"","ip":"127.0.0.1","user-agent":"PostmanRuntime/7.37.3","errors":"","cost":3.741857088}
+{"level":"INFO","time":"2024-07-20T23:27:48.924+0800","caller":"families/main.go:52","msg":"connection success..."}
+{"level":"INFO","time":"2024-07-20T23:29:28.096+0800","caller":"logger/logger.go:66","msg":"/api/v1/create_person","status":200,"method":"POST","path":"/api/v1/create_person","query":"","ip":"127.0.0.1","user-agent":"PostmanRuntime/7.37.3","errors":"","cost":31.218754071}
