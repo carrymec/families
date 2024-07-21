@@ -11,6 +11,7 @@
   "neo4JConfig": {
     "url": "localhost",
     "user": "neo4j",
-    "password": "password"
+    "password": "password",
+    "databaseName": "neo4j"
   }
 }

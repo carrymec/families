@@ -14,9 +14,10 @@ type Config struct {
 }
 
 type Neo4jConfig struct {
-	Url      string `json:"url"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	Url          string `json:"url"`
+	User         string `json:"user"`
+	Password     string `json:"password"`
+	DatabaseName string `json:"databaseName"`
 }
 
 // LogConfig 日志配置

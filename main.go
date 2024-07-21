@@ -50,7 +50,7 @@ func main() {
 		panic(err)
 	}
 	logger.Logger.Info("connection success...")
-	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: "neo4j"})
+	session := driver.NewSession(ctx, neo4j.SessionConfig{DatabaseName: cfg.Neo4jConfig.DatabaseName})
 	defer func(session neo4j.SessionWithContext, ctx context.Context) {
 		err := session.Close(ctx)
 		if err != nil {
