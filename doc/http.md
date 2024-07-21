@@ -23,3 +23,17 @@ curl --location 'http://127.0.0.1:8080/api/v1/create_person' \
     }
 }'
 ```
+3. 条件查询
+```shell
+curl --location 'http://127.0.0.1:8080/api/v1/query_persons' \
+--header 'Content-Type: application/json' \
+--data '{
+    "name": "政",
+    "page": 1,
+    "pageSize": 10
+}'
+```
+4. 单个查询
+```shell
+curl --location 'http://127.0.0.1:8080/api/v1/persons/431'
+```
