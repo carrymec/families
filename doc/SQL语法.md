@@ -76,6 +76,20 @@ MATCH
 RETURN <relationship-label-name>
 # eg
 MATCH (cust)-[r:do_shopping_with]->(cc) RETURN cust,cc
+
+# 分页查询
+WITH 5 AS pageSize, 2 AS page
+MATCH (p:Person)
+RETURN p
+SKIP pageSize * (page - 1)
+LIMIT pageSize
+
+# 关系查询
+MATCH (p:Person)-[r]->(m)
+RETURN p.name AS name, type(r) AS relationType, m.name AS endNode
+UNION
+MATCH (p:Person)<-[r]-(m)
+RETURN p.name AS name, type(r) AS relationType, m.name AS endNode
 ```
 # 删除node、删除关系
 ```shell
@@ -85,4 +99,11 @@ MATCH (n:Employee) delete n
 # TODO https://www.w3cschool.cn/neo4j/neo4j_cql_remove.html 
 ```shell
 
+```
+
+# 更新属性
+```shell
+MATCH (p:Person {name: "秦王政"})
+SET p.note = "test"
+RETURN p.name, p.note
 ```

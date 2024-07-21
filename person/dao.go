@@ -3,16 +3,17 @@ package person
 import (
 	"context"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github/carrymec/families/common"
 	"go.uber.org/zap"
 )
 
-type PersonDao struct {
+type Dao struct {
 	lg            *zap.Logger
 	sessionClient neo4j.SessionWithContext
 }
 
-func NewPersonDao(lg *zap.Logger, sessionClient neo4j.SessionWithContext) *PersonDao {
-	return &PersonDao{
+func NewPersonDao(lg *zap.Logger, sessionClient neo4j.SessionWithContext) *Dao {
+	return &Dao{
 		lg:            lg,
 		sessionClient: sessionClient,
 	}
@@ -20,14 +21,100 @@ func NewPersonDao(lg *zap.Logger, sessionClient neo4j.SessionWithContext) *Perso
 
 type DaoClient interface {
 	CreatePerson(ctx context.Context, person Person) (int64, error)
-	CreateRelationship(ctx context.Context, fromId, toId int64, relationType RelationType) error
-	CheckExistByName(ctx context.Context, name string) (int64, error)
-	CheckExistRelationship(ctx context.Context, fromId, toId int64, relationType RelationType) (bool, error)
+	CreateRelationship(ctx context.Context, fromId, toId int64, relationType common.RelationType) error
+	CheckExistByName(ctx context.Context, name string) (bool, error)
+	CheckExistRelationship(ctx context.Context, fromId, toId int64, relationType common.RelationType) (bool, error)
+	Query(ctx context.Context, query Query) ([]Person, error)
+	Update(ctx context.Context, id int64, person Person) error
+	FindById(ctx context.Context, id int64) (Person, error)
 }
 
-func (d *PersonDao) CheckExistByName(ctx context.Context, name string) (int64, error) {
+func (d *Dao) FindById(ctx context.Context, id int64) (Person, error) {
+	per, err := d.sessionClient.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		res, err := tx.Run(ctx,
+			`MATCH (p:Person) WHERE id(p) = $id RETURN p.name as name, p.birthdate as birthdate, p.note as note`,
+			map[string]any{
+				"id": id,
+			})
+		if err != nil {
+			d.lg.Error("search person by query err", zap.Int64("id", id), zap.Error(err))
+			return nil, err
+		}
+		var p Person
+		for res.Next(ctx) {
+			record := res.Record()
+			name, _ := record.Get("name")
+			birthdate, _ := record.Get("birthdate")
+			note, _ := record.Get("note")
+			p = Person{
+				ID:        id,
+				Name:      name.(string),
+				Birthdate: birthdate.(string),
+				Note:      note.(string),
+			}
+			break
+		}
+		return p, nil
+	})
+	if err != nil {
+		d.lg.Error("execute read err", zap.Error(err))
+		return Person{}, err
+	}
+	return per.(Person), nil
+}
+
+func (d *Dao) Update(ctx context.Context, id int64, person Person) error {
+	return nil
+}
+
+// 这里目前只查询了基础信息 后续可以带上关系
+func (d *Dao) Query(ctx context.Context, query Query) ([]Person, error) {
+	results, err := d.sessionClient.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		cypher := `MATCH (p:Person) RETURN id(p) as id, p.name as name, p.birthdate as birthdate SKIP $page LIMIT $pageSize`
+		paramsMap := map[string]any{
+			"page":     query.PageSize * (query.Page - 1), //pageSize * (page - 1)
+			"pageSize": query.PageSize,
+		}
+		if query.Name != "" {
+			cypher = `MATCH (p:Person) WHERE p.name CONTAINS $name RETURN id(p) as id, p.name as name, p.birthdate as birthdate SKIP $page LIMIT $pageSize`
+			paramsMap["name"] = query.Name
+		}
+		res, err := tx.Run(ctx, cypher, paramsMap)
+		if err != nil {
+			d.lg.Error("search person by query err", zap.Any("query", query), zap.Error(err))
+			return nil, err
+		}
+		var persons []Person
+		for res.Next(ctx) {
+			r := res.Record()
+			id, _ := r.Get("id")
+			name, _ := r.Get("name")
+			birthdate, _ := r.Get("birthdate")
+			note, _ := r.Get("note")
+			persons = append(persons, Person{
+				ID:        id.(int64),
+				Name:      name.(string),
+				Birthdate: birthdate.(string),
+				Note:      note.(string),
+			})
+		}
+		if err = res.Err(); err != nil {
+			return nil, err
+		}
+
+		return persons, nil
+	})
+	if err != nil {
+		d.lg.Error("execute read err", zap.Error(err))
+		return nil, err
+	}
+
+	return results.([]Person), nil
+}
+
+func (d *Dao) CheckExistByName(ctx context.Context, name string) (bool, error) {
 	userId, err := d.sessionClient.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		res, err := tx.Run(ctx, `MATCH(p:Person{name: $name}) RETURN p.id as id`,
+		res, err := tx.Run(ctx, `MATCH(p:Person{name: $name}) RETURN id(p) as id`,
 			map[string]any{
 				"name": name,
 			})
@@ -35,19 +122,20 @@ func (d *PersonDao) CheckExistByName(ctx context.Context, name string) (int64, e
 			d.lg.Error("match person err", zap.Error(err))
 			return nil, err
 		}
-		id := int64(-1)
+		flag := false
 		if res.Next(ctx) {
 			a := res.Record().AsMap()["id"]
-			id = a.(int64)
-			d.lg.Debug("match person ok", zap.Int64("id", id))
+			idint := a.(int64)
+			flag = idint != -1
+			d.lg.Debug("match person ok", zap.Int64("id", idint))
 		}
-		return id, nil
+		return flag, nil
 	})
 	if err != nil {
 		d.lg.Error("execute read err", zap.Error(err))
-		return -1, err
+		return false, err
 	}
-	return userId.(int64), nil
+	return userId.(bool), nil
 }
 
 /*
@@ -57,12 +145,13 @@ MATCH (n:Person) WHERE id(n) = 427
 create(p:Person{name: "秦王政1",birthdate: "前259年－前210年"})
 CREATE (p)-[pson:son]->(n)
 */
-func (d *PersonDao) CreatePerson(ctx context.Context, person Person) (int64, error) {
+func (d *Dao) CreatePerson(ctx context.Context, person Person) (int64, error) {
 	id, err := d.sessionClient.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-		cypher := "CREATE (p:Person {name: $name, birthdate: $birthdate}) RETURN id(p) as id"
+		cypher := "CREATE (p:Person {name: $name, birthdate: $birthdate, note: $note}) RETURN id(p) as id"
 		paramMap := map[string]interface{}{
 			"name":      person.Name,
 			"birthdate": person.Birthdate,
+			"note":      person.Note,
 		}
 		if person.Relation != nil {
 			// 代表有关系绑定 关系ID在service层做了校验
@@ -74,6 +163,7 @@ func (d *PersonDao) CreatePerson(ctx context.Context, person Person) (int64, err
 				"relationId": person.Relation.RelationId,
 				"name":       person.Name,
 				"birthdate":  person.Birthdate,
+				"note":       person.Note,
 			}
 		}
 
@@ -106,7 +196,7 @@ func (d *PersonDao) CreatePerson(ctx context.Context, person Person) (int64, err
 	return id.(int64), nil
 }
 
-func (d *PersonDao) CreateRelationship(ctx context.Context, fromId, toId int64, relationType RelationType) error {
+func (d *Dao) CreateRelationship(ctx context.Context, fromId, toId int64, relationType common.RelationType) error {
 	_, err := d.sessionClient.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		result, err := tx.Run(ctx, `MATCH (a:Person {id: $fromId}), (b:Person {id: $toId})
              CREATE (a)-[r:`+string(relationType)+`]->(b)
@@ -132,7 +222,7 @@ func (d *PersonDao) CreateRelationship(ctx context.Context, fromId, toId int64, 
 	return nil
 }
 
-func (d *PersonDao) CheckExistRelationship(ctx context.Context, fromId, toId int64, relationType RelationType) (bool, error) {
+func (d *Dao) CheckExistRelationship(ctx context.Context, fromId, toId int64, relationType common.RelationType) (bool, error) {
 	exist, err := d.sessionClient.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		res, err := tx.Run(ctx, `
 			 MATCH (a:Person {id: $fromId})-[r:`+string(relationType)+`]->(b:Person {id: $toId})
