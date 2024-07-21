@@ -62,6 +62,7 @@ go run main.go
 5. 查询某人的具体信息
 # 功能效果图展示
 ![img.png](doc/images/img.png)
+![img.png](doc/images/img_1.png)
 
 # 未来规划
 

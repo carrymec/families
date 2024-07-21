@@ -2,14 +2,17 @@ package person
 
 import (
 	"context"
+
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github/carrymec/families/common"
+	"github/carrymec/families/pkg"
 	"go.uber.org/zap"
 )
 
 type Dao struct {
-	lg            *zap.Logger
-	sessionClient neo4j.SessionWithContext
+	lg *zap.Logger
+	//sessionClient  neo4j.SessionWithContext
+	sessionClient pkg.PersonSessionWithContext
 }
 
 func NewPersonDao(lg *zap.Logger, sessionClient neo4j.SessionWithContext) *Dao {
