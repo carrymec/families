@@ -10,10 +10,12 @@ import (
 )
 
 type Dao struct {
-	lg *zap.Logger
-	//sessionClient  neo4j.SessionWithContext
+	lg            *zap.Logger
 	sessionClient pkg.PersonSessionWithContext
 }
+
+// 保证Dao都实现了DaoClient接口
+var _ DaoClient = (*Dao)(nil)
 
 func NewPersonDao(lg *zap.Logger, sessionClient neo4j.SessionWithContext) *Dao {
 	return &Dao{
@@ -30,6 +32,7 @@ type DaoClient interface {
 	Query(ctx context.Context, query Query) ([]Person, error)
 	Update(ctx context.Context, id int64, person Person) error
 	FindById(ctx context.Context, id int64) (Person, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 func (d *Dao) FindById(ctx context.Context, id int64) (Person, error) {
@@ -67,10 +70,29 @@ func (d *Dao) FindById(ctx context.Context, id int64) (Person, error) {
 }
 
 func (d *Dao) Update(ctx context.Context, id int64, person Person) error {
+	_, err := d.sessionClient.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		cypher := `MATCH(p:Person) WHERE id(p) = $id SET p.note = $note, p.birthdate = $birthdate RETURN p`
+		paramMap := map[string]any{
+			"note":      person.Note,
+			"birthdate": person.Birthdate,
+			"id":        id,
+		}
+
+		_, err := tx.Run(ctx, cypher, paramMap)
+		if err != nil {
+			d.lg.Error("update err", zap.Error(err))
+			return nil, err
+		}
+		return nil, nil
+	})
+	if err != nil {
+		d.lg.Error("execute write err", zap.Error(err))
+		return err
+	}
 	return nil
 }
 
-// 这里目前只查询了基础信息 后续可以带上关系
+// Query 这里目前只查询了基础信息 后续可以带上关系,这里SQL使用拼接方式实现，目前功能简单就暂时这样写。
 func (d *Dao) Query(ctx context.Context, query Query) ([]Person, error) {
 	results, err := d.sessionClient.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		cypher := `MATCH (p:Person) RETURN id(p) as id, p.name as name, p.birthdate as birthdate SKIP $page LIMIT $pageSize`
@@ -249,4 +271,23 @@ func (d *Dao) CheckExistRelationship(ctx context.Context, fromId, toId int64, re
 		return false, err
 	}
 	return exist.(bool), nil
+}
+
+func (d *Dao) Delete(ctx context.Context, id int64) error {
+	_, err := d.sessionClient.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+		_, err := tx.Run(ctx, `MATCH(p:Person) WHERE id(p) = $id DELETE p`, map[string]any{
+			"id": id,
+		})
+		if err != nil {
+			d.lg.Error("delete err", zap.Error(err))
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	if err != nil {
+		d.lg.Error("execute write err", zap.Error(err))
+		return err
+	}
+	return nil
 }

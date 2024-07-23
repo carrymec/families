@@ -62,10 +62,14 @@ func TestDao_CheckExistByName(t *testing.T) {
 			transaction := mock_session.NewMockManagedTransaction(ctrl)
 			transaction.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, getErr(tt.runErr))
 
-			// TODO ERR
-			//withContext.EXPECT().ExecuteRead(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(ctx context.Context, work neo4j.ManagedTransactionWork) (interface{}, error) {
-			//	return work(transaction)
+			//withContext.EXPECT().ExecuteRead(gomock.Any(), gomock.Any()).Return(nil, getErr(tt.runErr)).AnyTimes()
+			//withContext.EXPECT().ExecuteRead(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(ctx context.Context, work neo4j.SessionWithContext, config neo4j.TransactionConfig) (interface{}, error) {
+			//	return (transaction), nil
 			//})
+			// TODO ERR
+			withContext.EXPECT().ExecuteRead(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(ctx context.Context, work neo4j.ManagedTransaction) (interface{}, error) {
+				return transaction, nil
+			})
 			d := &Dao{
 				lg:            NewTestLogger(),
 				sessionClient: withContext,

@@ -2,11 +2,13 @@ package person
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github/carrymec/families/common"
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
+	"github/carrymec/families/common"
 )
 
 type Controller struct {
@@ -83,7 +85,7 @@ func (p *Controller) FindById(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Resp{
 			Code: -1,
-			Msg:  fmt.Sprintf("参数id错误 %#v", err),
+			Msg:  fmt.Sprintf("参数id错误 %s", err.Error()),
 			Data: nil,
 		})
 		return
@@ -92,7 +94,7 @@ func (p *Controller) FindById(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, common.Resp{
 			Code: -1,
-			Msg:  fmt.Sprintf("查询用户失败 %#v", err),
+			Msg:  fmt.Sprintf("查询用户失败 %s", err.Error()),
 			Data: nil,
 		})
 		return
@@ -100,6 +102,81 @@ func (p *Controller) FindById(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, common.Resp{
 		Code: 0,
 		Data: person,
+	})
+	return
+}
+
+func (p *Controller) Update(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusInternalServerError, common.Resp{
+			Code: -1,
+			Msg:  "参数id为空",
+			Data: nil,
+		})
+		return
+	}
+	intId, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, common.Resp{
+			Code: -1,
+			Msg:  fmt.Sprintf("参数id错误 %s", err.Error()),
+			Data: nil,
+		})
+		return
+	}
+	var per Person
+	if err := ctx.ShouldBind(&per); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err = p.service.Update(ctx, int64(intId), per)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, common.Resp{
+			Code: -1,
+			Msg:  fmt.Sprintf("更新用户失败 %s", err.Error()),
+			Data: nil,
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, common.Resp{
+		Code: 0,
+		Data: intId,
+	})
+	return
+}
+
+func (p *Controller) Delete(ctx *gin.Context) {
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusInternalServerError, common.Resp{
+			Code: -1,
+			Msg:  "参数id为空",
+			Data: nil,
+		})
+		return
+	}
+	intId, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, common.Resp{
+			Code: -1,
+			Msg:  fmt.Sprintf("参数id错误 %s", err.Error()),
+			Data: nil,
+		})
+		return
+	}
+	err = p.service.Delete(ctx, int64(intId))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, common.Resp{
+			Code: -1,
+			Msg:  fmt.Sprintf("删除用户失败 %s", err.Error()),
+			Data: nil,
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, common.Resp{
+		Code: 0,
+		Data: nil,
 	})
 	return
 }
