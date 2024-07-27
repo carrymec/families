@@ -25,6 +25,7 @@ type Relation struct {
 	RelationId   int64               `json:"relationId"`
 	RelationType common.RelationType `json:"relationType"`
 	// TODO 支持关系属性，如夫妻关系，可以给这个关系加上结婚时间等
+	//Labels map[string]string `json:"labels"`
 }
 
 type Query struct {

@@ -2,6 +2,7 @@ package person
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github/carrymec/families/common"
@@ -180,10 +181,10 @@ func (d *Dao) CreatePerson(ctx context.Context, person Person) (int64, error) {
 		}
 		if person.Relation != nil {
 			// 代表有关系绑定 关系ID在service层做了校验
-			cypher = `MATCH(n:Person) WHERE id(n)=$relationId
-                      CREATE(p:Person {name: $name, birthdate: $birthdate})
-					  CREATE(p) -[r:` + string(person.Relation.RelationType) + `] ->(n)
-                      RETURN id(p) as id`
+			cypher = fmt.Sprintf(`MATCH(n:Person) WHERE id(n)=$relationId
+                      CREATE(p:Person {name: $name, birthdate: $birthdate, note: $note})
+					  CREATE(p) -[r:%s] ->(n)
+                      RETURN id(p) as id`, string(person.Relation.RelationType))
 			paramMap = map[string]interface{}{
 				"relationId": person.Relation.RelationId,
 				"name":       person.Name,

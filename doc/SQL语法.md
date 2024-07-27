@@ -67,6 +67,12 @@ CREATE (video1:YoutubeVideo1{title:"Action Movie1",updated_by:"Abc",uploaded_dat
 MATCH (n:Person) WHERE id(n) = 427
 create(p:Person{name: "秦王政1",birthdate: "前259年－前210年"})
 CREATE (p)-[pson:son]->(n)
+
+# 创建双向关系
+CREATE (zhangsan:User {name: '张三'})-[:FATHER_OF]->(zhangsi:User {name: '张四'})-[:SON_OF]->(zhangsan)
+CREATE 
+  (zhangsan:Person {name: '张三'})-[:FATHER_OF {relationship: 'father', since: 2020}]->(zhangsi:Person {name: '张四'}),
+  (zhangsi)-[:SON_OF {relationship: 'son', since: 2020}]->(zhangsan)
 ```
 # 查询关系
 ```shell
@@ -95,6 +101,9 @@ RETURN p.name AS name, type(r) AS relationType, m.name AS endNode
 ```shell
 match(c:FaceBookProfile1) -[r:ACTION_MOVIES] -> (cc:FaceBookProfile2) delete c,cc,r
 MATCH (n:Employee) delete n 
+match(u:User) -[a:FATHER_OF] ->(u1:User) delete a
+# 删除异常数据关系
+match(u:User) -[a:RelationType] ->() delete a
 ```
 # TODO https://www.w3cschool.cn/neo4j/neo4j_cql_remove.html 
 ```shell
