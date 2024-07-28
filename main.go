@@ -4,14 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"log"
 	"os"
 
+	"github.com/fvbock/endless"
 	"github.com/gin-gonic/gin"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-	"github/carrymec/families/person"
 
 	"github/carrymec/families/configs"
 	"github/carrymec/families/logger"
+	"github/carrymec/families/person"
+	"github/carrymec/families/relationship"
 )
 
 func main() {
@@ -64,5 +68,14 @@ func main() {
 	controller := person.NewPersonController(logger.Logger, service)
 	controller.Register(r)
 
-	_ = r.Run()
+	relationDao := relationship.NewRelationDao(logger.Logger, session)
+	relationService := relationship.NewService(logger.Logger, relationDao)
+	relationController := relationship.NewRelationController(logger.Logger, relationService)
+	relationController.Register(r)
+
+	if err := endless.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), r); err != nil {
+		log.Fatalf("listen: %s\n", err)
+	}
+
+	fmt.Println("Server exiting")
 }
